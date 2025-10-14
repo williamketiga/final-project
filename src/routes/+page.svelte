@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
 
+  
+  
   onMount(() => {
     // Animasi untuk elemen-elemen dekorasi ikan
     const fishes = document.querySelectorAll('.fish-decoration');

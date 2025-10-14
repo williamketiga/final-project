@@ -48,22 +48,32 @@
     
     isLoading = true;
     
-    // Mock registration - simulasikan delay network
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock successful registration
-    const mockUser = {
-      id: Math.floor(Math.random() * 1000),
-      username: formData.username,
-      email: formData.email,
-      created_at: new Date().toISOString()
-    };
-    
-    // Simpan ke localStorage (mock)
-    localStorage.setItem('forumIkanUser', JSON.stringify(mockUser));
-    
-    // Redirect ke halaman utama
-    goto('/');
+    // Integrasi ke API Register
+    try{
+      const response = await fetch('/api/register', {
+        method:'POST',
+        headers:{
+          'Content-Type' : 'application/json',
+          
+        },
+        body: JSON.stringify({
+          email : formData.email,
+          username : formData.username,
+          password : formData.password
+        })
+      })
+
+      const result = await response.json()
+      console.log(result);
+
+      if(!result){
+        console.log(`Register Failed! ${result}`)
+      }
+      goto('/login')
+
+    }catch(err){
+
+    }
     
     isLoading = false;
   };

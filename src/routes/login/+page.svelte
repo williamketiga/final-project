@@ -64,7 +64,7 @@
         })
 
         const result = await response.json()
-
+        
         if(result.success){
           if(browser){
             localStorage.setItem('token', result.data.token)
