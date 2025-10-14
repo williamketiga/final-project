@@ -1,103 +1,116 @@
 <script>
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { goto } from "$app/navigation";
+  import { browser } from "$app/environment";
+  import { form } from "$app/server";
+  import { error } from "@sveltejs/kit";
+  import { onMount } from "svelte";
+
 
   let formData = {
-    email: '',
-    password: ''
-  };
-  
-  let isLoading = false;
-  let errors = {};
-  let showPassword = false;
-  let rememberMe = false;
+    email : '',
+    password : ''
+  }
 
-  // Mock users data
-  const mockUsers = [
-    { id: 1, email: 'user@example.com', password: 'password123', username: 'ikanlover' },
-    { id: 2, email: 'budidaya@example.com', password: 'password123', username: 'budidayaman' },
-    { id: 3, email: 'hias@example.com', password: 'password123', username: 'hiasindah' }
-  ];
+  let errors = {
+     email : '',
+     password : '',
+     general : '',
+  }
 
-  const validateForm = () => {
-    errors = {};
-    
-    if (!formData.email) {
-      errors.email = 'Email wajib diisi';
-    }
-    
-    if (!formData.password) {
-      errors.password = 'Password wajib diisi';
-    }
-    
-    return Object.keys(errors).length === 0;
-  };
+  let isLoading = false
+  let showPassword = false
+  let rememberMe = false
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    isLoading = true;
-    
-    // Mock authentication - simulasikan delay network
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Cari user di mock data
-    const user = mockUsers.find(u => 
-      u.email === formData.email && u.password === formData.password
-    );
-    
-    if (user) {
-      // Mock successful login
-      const userData = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        created_at: new Date().toISOString()
-      };
-      
-      // Simpan ke localStorage
-      localStorage.setItem('forumIkanUser', JSON.stringify(userData));
-      
-      if (rememberMe) {
-        localStorage.setItem('forumIkanRemember', 'true');
+  function togglePasswordVisibility(){
+    showPassword = !showPassword
+  }
+
+  function fillDemoAccount(email,password){
+    formData.email = email,
+    formData.password = password,
+    errors = { email: '', password: '', general : ''}
+  }
+
+  async function handleSubmit(e) {
+      e.preventDefault()
+      isLoading = true
+
+      // reset error
+      errors = { email: '', password: '', general : ''}
+
+      // validation
+      if(!formData.email){
+        errors.email = 'Email is Required!'
+        isLoading = false
+        return
       }
-      
-      // Show success message
-      const Toast = Swal.mixin({
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
-      
-      Toast.fire({
-        icon: "success",
-        title: "Login berhasil!"
-      });
-      
-      // Redirect ke halaman utama
-      setTimeout(() => {
-        goto('/');
-      }, 2000);
-      
-    } else {
-      errors.general = 'Email atau password salah';
-      isLoading = false;
-    }
-  };
 
-  const togglePasswordVisibility = () => {
-    showPassword = !showPassword;
-  };
+      if(!formData.password){
+        errors.password = 'Password is Required!'
+        isLoading = false
+        return
+      }
 
-  const fillDemoAccount = (email, password) => {
-    formData.email = email;
-    formData.password = password;
-    rememberMe = true;
-  };
+      try{
+        const response = await fetch('/api/login',{
+          method : 'POST',
+          headers : {
+            'Content-Type' : 'application/json',
+          },
+          body: JSON.stringify({
+            email : formData.email,
+            password : formData.password
+          })
+        })
+
+        const result = await response.json()
+        
+        if(result.success){
+          if(browser){
+            localStorage.setItem('token', result.data.token)
+            localStorage.setItem('user', JSON.stringify(result.data.user))
+            
+            if(rememberMe){
+              localStorage.setItem('rememberedEmail', formData.email)
+            }
+          }
+          // success alert
+          if(typeof Swal !== 'undefined'){
+            Swal.fire({
+              icon : 'success',
+              title : 'Login success!',
+              text : 'Welcome Back!',
+              timer : 1500,
+              showConfimationButoon : false
+            }).then(()=>{
+              goto('/') // goto index
+            })
+          }else{
+            setTimeout(()=>{
+              goto('/') // goto index
+            }, 1000)
+          }
+        } else {
+          errors.general = result.message || 'Login failed! , check email and your password!'
+        }
+
+      }catch(error){
+        errors.general = 'Something went wrong!'
+        console.error(`Error ${error}`)
+
+        isLoading = false
+      }
+
+      onMount(() => {
+        if(browser){
+          const rememberedEmail = localStorage.getItem('rememberedEmail')
+          if(rememberedEmail){
+            formData.email;
+            rememberMe = true
+          }
+        }
+      })
+  }
 </script>
 
 <svelte:head>
