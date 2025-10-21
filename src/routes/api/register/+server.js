@@ -11,12 +11,17 @@ export async function POST({request}){
 
         const hashedPassword = await bcrypt.hash(password,12)
         const [result] = await pool.execute(
-            'INSERT INTO user (username, email, password, created_at) VALUES (? , ?, ?,NOW())', [username,email, hashedPassword]
+            'INSERT INTO user (username, email, password, created_at) VALUES (? , ?, ?,NOW())', [username, email, hashedPassword]
         )
-
+        if (!result) {
+            return json({
+                success : false,
+                message : `Register failed ${result}`
+            })
+        }
         return json({
             success : true,
-            message : 'Register Successfull!',
+            message : 'Register successful',
             data : {
                 id: result.insertId
             }

@@ -67,7 +67,7 @@ CREATE TABLE `post_comment` (
 --
 
 CREATE TABLE `user` (
-  `id` varchar(100) NOT NULL,
+  `id` int(100) NOT NULL,
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
