@@ -1,12 +1,13 @@
 import mysql from 'mysql2/promise';
 
-const connectionString = process.env.DATABASE_URL || 
-  `mysql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?ssl={"rejectUnauthorized":false}`;
-
 const dbConfig = {
-  uri: connectionString,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 12592, 
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false 
   },
   connectTimeout: 60000,
   acquireTimeout: 60000,
@@ -16,49 +17,37 @@ const dbConfig = {
   queueLimit: 0
 };
 
-export const pool = mysql.createPool(connectionString);
+export const pool = mysql.createPool(dbConfig);
 
 export async function testConnection() {
+  let connection;
   try {
-    console.log('🔄 Testing Aiven database connection...');
+    console.log('🔌 Testing database connection...');
+    console.log('Host:', process.env.DB_HOST);
+    console.log('Database:', process.env.DB_NAME);
+    console.log('User:', process.env.DB_USER);
     
-    const connection = await pool.getConnection();
-    console.log('✅ Connected to Aiven MySQL!');
+    connection = await pool.getConnection();
+    console.log('✅ Database connected successfully!');
     
-    // Check database
-    const [databases] = await connection.execute('SHOW DATABASES');
-    console.log('📊 Available databases:', databases.map(db => db.Database));
-    
-    // Check current database tables
-    const [tables] = await connection.execute('SHOW TABLES');
-    console.log('📋 Current database tables:', tables.map(table => Object.values(table)[0]));
+    const [rows] = await connection.execute('SELECT 1 as test');
+    console.log('✅ Test query executed successfully');
     
     connection.release();
     return true;
     
   } catch (error) {
-    console.error('❌ Aiven connection failed:');
+    console.error('Database connection failed:');
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
-    if (error.code === 'ETIMEDOUT') {
-      console.error('💡 Solution: Check your network connection and Aiven service status');
-    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.error('💡 Solution: Check DB_USER and DB_PASSWORD');
-    } else if (error.code === 'ENOTFOUND') {
-      console.error('💡 Solution: Check DB_HOST - cannot resolve hostname');
-    } else if (error.code === 'ECONNREFUSED') {
-      console.error('💡 Solution: Check DB_PORT and Aiven service status');
+    if (connection) {
+      connection.release();
     }
     
-    console.error('Full error:', error.message);
     return false;
   }
 }
 
-// Test on import
-testConnection().then(success => {
-  if (success) {
-    console.log('🎉 Database module ready!');
-  } else {
-    console.log('⚠️ Database connection issues - check configuration');
-  }
-});
+testConnection();
